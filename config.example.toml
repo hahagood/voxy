@@ -1,0 +1,32 @@
+[audio]
+device = "default"        # 音频设备名称，"default" 使用系统默认
+sample_rate = 16000       # 采样率 (Hz)，Whisper 标准为 16000
+silence_threshold = 0.01  # 静音检测阈值 (0.0-1.0)
+silence_duration = 2.0    # 连续静音 N 秒后自动停止录音
+
+[stt]
+backend = "sensevoice"    # 语音识别后端: sensevoice / whisper / cloud
+language = "auto"         # 识别语言: auto / zh / en / ja / ko ...
+
+[stt.whisper]
+model = "small"           # 模型大小: tiny / base / small / medium
+device = "cuda"           # 计算设备: cuda / cpu
+compute_type = "int8"     # 计算精度: int8 / float16 / float32
+
+[stt.sensevoice]
+model = "iic/SenseVoiceSmall"  # ModelScope 模型 ID
+device = "cuda:0"              # 计算设备: cuda:0 / cpu
+
+[stt.cloud]
+api_base = "https://api.openai.com/v1"  # OpenAI 兼容端点
+api_key = ""                             # API 密钥 (也可通过 OPENAI_API_KEY 环境变量设置)
+model = "whisper-1"                      # 模型名称
+
+[llm]
+enabled = false                       # 是否启用 AI 文本润色
+provider = "ollama/qwen3:4b"          # litellm 模型标识
+api_base = "http://localhost:11434"   # API 地址 (Ollama 默认)
+# api_key = ""                        # 云端 API 需要设置密钥
+
+[output]
+mode = "clipboard"   # 输出方式: clipboard / stdout / type

@@ -1,0 +1,32 @@
+[project]
+name = "voxy"
+version = "0.1.0"
+description = "Linux 语音听写工具 - Typeless 开源平替"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "sounddevice>=0.5",
+    "numpy>=1.24",
+    "click>=8.0",
+    "litellm>=1.0",
+    "openai>=1.0",
+]
+
+[project.optional-dependencies]
+whisper = ["faster-whisper>=1.0"]
+sensevoice = ["funasr>=1.0"]
+all = ["faster-whisper>=1.0", "funasr>=1.0"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+voxy = "voxy.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/voxy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
