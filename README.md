@@ -8,9 +8,9 @@ Linux 语音听写工具 — Typeless 开源平替。
 
 - **SenseVoice STT** — 非自回归架构，推理极快（RTF ~0.05），中文效果优秀
 - **多 STT 后端** — SenseVoice / faster-whisper / OpenAI Whisper API，可插拔切换
-- **AI 润色（可选）** — 通过 litellm 调用任意 LLM（Ollama / OpenAI / Anthropic 等）
-- **多输出方式** — 直接输入到焦点窗口（wtype）/ 剪贴板 / stdout
+- **AI 润色（可选）** — 通过 litellm 调用任意 LLM（Ollama / OpenAI 等）
 - **自动静音检测** — 录音前自动测量环境噪音，动态设定阈值，说完自动停止
+- **智能输入** — 自动识别窗口类型，选择最佳输入方式（粘贴 / 直接输入）
 - **Hyprland 集成** — 全局快捷键 `Super+R` 弹出浮动小窗录音
 
 ## 系统要求
@@ -29,16 +29,8 @@ sudo pacman -S portaudio       # sounddevice 音频采集
 sudo pacman -S wtype           # Wayland 文字输入
 sudo pacman -S wl-clipboard    # Wayland 剪贴板 (wl-copy)
 
-# 可选
-sudo pacman -S ydotool         # Wayland 按键模拟（需启动守护进程）
-sudo pacman -S xdotool         # X11 文字输入（X11 环境）
-sudo pacman -S xclip           # X11 剪贴板（X11 环境）
-```
-
-如需使用 ydotool，启动守护进程：
-
-```bash
-systemctl --user enable --now ydotool
+# XWayland 应用支持（Emacs X11 等）
+sudo pacman -S xdotool         # X11 文字输入
 ```
 
 ### Python 依赖
@@ -91,6 +83,15 @@ windowrule {
 
 按 `Super+R`：弹出浮动小窗 → 说话 → 静音自动停止 → 转写结果自动输入到之前的焦点窗口。
 
+`voxy-record` 脚本会自动检测焦点窗口类型，选择最佳输入方式：
+
+| 窗口类型 | 输入方式 |
+|----------|----------|
+| 浏览器、GUI 应用 | Ctrl+V 粘贴 |
+| 终端（foot/kitty 等） | Ctrl+Shift+V 粘贴 |
+| Emacs (Wayland) | wtype 直接输入 |
+| XWayland 应用 | xdotool 逐字输入 |
+
 ## 配置
 
 复制 `config.example.toml` 到 `~/.config/voxy/config.toml`：
@@ -118,7 +119,7 @@ src/voxy/
 ├── config.py        # TOML 配置管理
 ├── audio.py         # 麦克风录音 + 动态静音检测
 ├── stt/
-│   ├── __init__.py  # STT 基类 + 工厂函数
+│   ├── __init__.py      # STT 基类 + 工厂函数
 │   ├── local_sense.py   # SenseVoice (funasr)
 │   ├── local_whisper.py # faster-whisper
 │   └── cloud.py         # OpenAI Whisper API
