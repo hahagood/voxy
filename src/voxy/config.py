@@ -35,7 +35,7 @@ DEFAULTS: dict[str, Any] = {
     },
     "llm": {
         "enabled": False,
-        "provider": "ollama/qwen3:4b",
+        "provider": "ollama/qwen2.5:3b-instruct",
         "api_base": "http://localhost:11434",
         "api_key": "",
     },
@@ -96,7 +96,7 @@ class STTConfig:
 @dataclass
 class LLMConfig:
     enabled: bool = False
-    provider: str = "ollama/qwen3:4b"
+    provider: str = "ollama/qwen2.5:3b-instruct"
     api_base: str = "http://localhost:11434"
     api_key: str = ""
 

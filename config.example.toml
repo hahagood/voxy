@@ -24,7 +24,7 @@ model = "whisper-1"                      # 模型名称
 
 [llm]
 enabled = false                       # 是否启用 AI 文本润色
-provider = "ollama/qwen3:4b"          # litellm 模型标识
+provider = "ollama/qwen2.5:3b-instruct"  # litellm 模型标识 (3b 平衡速度与效果)
 api_base = "http://localhost:11434"   # API 地址 (Ollama 默认)
 # api_key = ""                        # 云端 API 需要设置密钥
 
