@@ -38,6 +38,7 @@ DEFAULTS: dict[str, Any] = {
         "provider": "ollama/qwen2.5:3b-instruct",
         "api_base": "http://localhost:11434",
         "api_key": "",
+        "custom_terms": {},
     },
     "output": {
         "mode": "clipboard",
@@ -99,6 +100,7 @@ class LLMConfig:
     provider: str = "ollama/qwen2.5:3b-instruct"
     api_base: str = "http://localhost:11434"
     api_key: str = ""
+    custom_terms: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -130,7 +132,10 @@ def _build_config(data: dict) -> Config:
             sensevoice=SenseVoiceConfig(**stt_d.get("sensevoice", {})),
             cloud=CloudSTTConfig(**stt_d.get("cloud", {})),
         ),
-        llm=LLMConfig(**{k: v for k, v in llm_d.items() if not isinstance(v, dict)}),
+        llm=LLMConfig(
+            **{k: v for k, v in llm_d.items() if k != "custom_terms"},
+            custom_terms=llm_d.get("custom_terms", {}),
+        ),
         output=OutputConfig(**output_d),
     )
 

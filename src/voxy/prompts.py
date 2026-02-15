@@ -6,14 +6,23 @@ SYSTEM_PROMPT = """\
 规则：
 1. 保留所有有意义的内容，不要删减或摘要
 2. 删除口头禅（呃、嗯、就是说、然后、那个、对吧）和无意义重复
-3. 修正语音识别的同音字/谐音错误（如"费慢"→"费曼"、"通一听"→"通义听悟"）
-4. 修正语音识别常见的中英混杂错误，还原英文专有名词（如"大make"→"DJI Mic"、"no"→"Notion"、"pro"→"prompt"）
-5. 补全标点符号，分句断句
-6. 保持原意，不添加原文没有的信息
+3. 短语级回读去重：检测到词组或短语被完整重复时，只保留一次（如"在这个项目...在这个项目里"→"在这个项目里"）
+4. 自我修正处理：当说话人改口时，以最后一次表述为准（如"把这个函数...把这个类删掉"→"把这个类删掉"）
+5. 修正语音识别的同音字/谐音错误（如"费慢"→"费曼"、"通一听"→"通义听悟"）
+6. 修正语音识别常见的中英混杂错误，还原英文专有名词，严格遵循官方大小写（如"大make"→"DJI Mic"、"no"→"Notion"、"给它哈布"→"GitHub"、"微S扣"→"VS Code"）
+7. 中英文排版：汉字与英文/数字之间加空格（如"使用Python开发"→"使用 Python 开发"）
+8. 补全标点符号，分句断句
+9. 保持原意，不添加原文没有的信息
 
 示例：
 输入：呃就是说我觉得这个东西吧怎么说呢就是有时候快有时候慢你也不知道它到底什么情况反正就是不太稳定但也不是说完全不能用就是体验上差点意思
 输出：这个东西有时候快有时候慢，不太稳定。不是完全不能用，但体验上差点意思。
+
+输入：你把那个代码...代码提交到给它哈布上，还有就是...还有就是记得检查一下...检查一下分支。
+输出：你把代码提交到 GitHub 上，还有记得检查一下分支。
+
+输入：我用的是派森3.12版本，然后那个呃安装了一个叫fast唉劈唉的库，就是...就是用来做接口开发的。
+输出：我用的是 Python 3.12 版本，安装了一个叫 FastAPI 的库，用来做接口开发的。
 
 只输出编辑后的文本，不要解释。/no_think\
 """
@@ -21,6 +30,22 @@ SYSTEM_PROMPT = """\
 USER_PROMPT_TEMPLATE = "输入：{text}\n输出："
 
 
-def format_prompt(raw_text: str) -> tuple[str, str]:
+def _build_terms_section(custom_terms: dict[str, str]) -> str:
+    """将自定义词典构建为提示词片段。"""
+    if not custom_terms:
+        return ""
+    mappings = "、".join(f"{k} → {v}" for k, v in custom_terms.items())
+    return f"\n自定义纠正词典（优先级最高）：{mappings}\n"
+
+
+def format_prompt(
+    raw_text: str, custom_terms: dict[str, str] | None = None
+) -> tuple[str, str]:
     """返回 (system_prompt, user_prompt) 元组。"""
-    return SYSTEM_PROMPT, USER_PROMPT_TEMPLATE.format(text=raw_text)
+    system = SYSTEM_PROMPT
+    if custom_terms:
+        system = system.replace(
+            "只输出编辑后的文本",
+            _build_terms_section(custom_terms) + "只输出编辑后的文本",
+        )
+    return system, USER_PROMPT_TEMPLATE.format(text=raw_text)

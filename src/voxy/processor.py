@@ -26,7 +26,7 @@ def process_text(raw_text: str, config: LLMConfig) -> str:
     logging.getLogger("LiteLLM").setLevel(logging.CRITICAL)
     logging.getLogger("litellm").setLevel(logging.CRITICAL)
 
-    system_prompt, user_prompt = format_prompt(raw_text)
+    system_prompt, user_prompt = format_prompt(raw_text, config.custom_terms)
 
     kwargs = {}
     if config.api_base:
