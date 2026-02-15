@@ -9,6 +9,7 @@ Linux 语音听写工具 — Typeless 开源平替。
 - **SenseVoice STT** — 非自回归架构，推理极快（RTF ~0.05），中文效果优秀
 - **多 STT 后端** — SenseVoice / faster-whisper / OpenAI Whisper API，可插拔切换
 - **AI 润色（可选）** — 通过 litellm 调用任意 LLM（Ollama / OpenAI 等）
+- **润色历史记录** — 自动保存原始转写与润色结果的对照记录，便于积累数据优化提示词
 - **自动静音检测** — 录音前自动测量环境噪音，动态设定阈值，说完自动停止
 - **智能输入** — 自动识别窗口类型，选择最佳输入方式（粘贴 / 直接输入）
 - **Hyprland 集成** — 全局快捷键 `Super+R` 弹出浮动小窗录音
@@ -108,8 +109,32 @@ cp config.example.toml ~/.config/voxy/config.toml
 | `stt.backend` | `sensevoice` | STT 后端：sensevoice / whisper / cloud |
 | `stt.language` | `auto` | 识别语言：auto / zh / en / ja ... |
 | `llm.enabled` | `false` | 是否启用 AI 文本润色 |
-| `llm.provider` | `ollama/qwen3:4b` | litellm 模型标识 |
+| `llm.provider` | `ollama/qwen2.5:3b-instruct` | litellm 模型标识 |
 | `output.mode` | `clipboard` | 输出方式：clipboard / stdout / type |
+
+## 润色历史记录
+
+当 AI 润色启用时，每次润色成功后会自动将原始转写和润色结果保存到：
+
+```
+~/.local/share/voxy/history.json
+```
+
+文件格式为 JSON 数组，每条记录包含：
+
+```json
+[
+  {
+    "raw": "原始转写文本",
+    "polished": "AI 润色后文本",
+    "timestamp": "2026-02-15T08:30:00+00:00"
+  }
+]
+```
+
+- `--raw` 模式或 `llm.enabled=false` 时不保存（无对照数据）
+- 保存失败不影响主流程
+- 可用 `jq` 查看：`jq . ~/.local/share/voxy/history.json`
 
 ## 项目结构
 
@@ -127,6 +152,17 @@ src/voxy/
 ├── prompts.py       # LLM 提示词模板
 └── output.py        # 文本输出 (wtype/剪贴板/stdout)
 ```
+
+## Roadmap
+
+参考 [VoiceInk](https://github.com/Beingpax/VoiceInk) 等项目，计划改进：
+
+- [ ] **Daemon 模式** — 后台常驻，模型预加载，避免每次冷启动延迟
+- [ ] **自定义词汇表** — 配置常用术语和替换规则，提升中文专有名词识别准确率
+- [ ] **多 Prompt Mode** — 支持 casual / formal / code 等多种润色风格，`--mode` 切换
+- [ ] **Power Mode** — 根据当前焦点窗口 class 自动匹配润色规则
+- [ ] **上下文感知** — 将剪贴板/选中文本作为上下文传给 LLM，提升润色质量
+- [ ] **媒体播放控制** — 录音时自动暂停音乐（playerctl）
 
 ## License
 

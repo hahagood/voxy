@@ -1,10 +1,38 @@
 """CLI 入口 - click 命令行界面"""
 
+import json
 import sys
+from datetime import datetime, timezone
+from pathlib import Path
 
 import click
 
 from voxy.config import load_config
+
+
+HISTORY_PATH = Path.home() / ".local" / "share" / "voxy" / "history.json"
+
+
+def _append_history(raw: str, polished: str) -> None:
+    """追加一条转写/润色对照记录到 history.json"""
+    try:
+        HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
+        records = []
+        if HISTORY_PATH.exists():
+            records = json.loads(HISTORY_PATH.read_text(encoding="utf-8"))
+        records.append(
+            {
+                "raw": raw,
+                "polished": polished,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        HISTORY_PATH.write_text(
+            json.dumps(records, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    except Exception as e:
+        click.echo(f"保存历史记录失败: {e}", err=True)
 
 
 @click.group()
@@ -64,11 +92,14 @@ def record(ctx, raw: bool, output: str | None):
     if not raw and config.llm.enabled:
         from voxy.processor import process_text
 
+        raw_text = text
         click.echo("  AI 润色中...", err=True)
         try:
             text = process_text(text, config.llm)
         except Exception as e:
             click.echo(f"AI 润色失败 (使用原始文本): {e}", err=True)
+        else:
+            _append_history(raw_text, text)
 
     # 4. 输出
     from voxy.output import output_text
