@@ -23,6 +23,9 @@ class STTEngine(ABC):
         """
         ...
 
+    def unload(self) -> None:
+        """卸载模型，释放显存。子类可覆盖。"""
+
 
 def create_stt(config: STTConfig) -> STTEngine:
     """根据配置创建 STT 引擎。"""

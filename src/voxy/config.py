@@ -38,7 +38,12 @@ DEFAULTS: dict[str, Any] = {
         "provider": "ollama/qwen2.5:3b-instruct",
         "api_base": "http://localhost:11434",
         "api_key": "",
+        "proxy": "",
         "custom_terms": {},
+    },
+    "daemon": {
+        "enabled": True,
+        "idle_timeout": 10,
     },
     "output": {
         "mode": "clipboard",
@@ -100,7 +105,14 @@ class LLMConfig:
     provider: str = "ollama/qwen2.5:3b-instruct"
     api_base: str = "http://localhost:11434"
     api_key: str = ""
+    proxy: str = ""
     custom_terms: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class DaemonConfig:
+    enabled: bool = True
+    idle_timeout: int = 10
 
 
 @dataclass
@@ -113,6 +125,7 @@ class Config:
     audio: AudioConfig = field(default_factory=AudioConfig)
     stt: STTConfig = field(default_factory=STTConfig)
     llm: LLMConfig = field(default_factory=LLMConfig)
+    daemon: DaemonConfig = field(default_factory=DaemonConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
 
 
@@ -121,6 +134,7 @@ def _build_config(data: dict) -> Config:
     audio_d = data.get("audio", {})
     stt_d = data.get("stt", {})
     llm_d = data.get("llm", {})
+    daemon_d = data.get("daemon", {})
     output_d = data.get("output", {})
 
     return Config(
@@ -136,6 +150,7 @@ def _build_config(data: dict) -> Config:
             **{k: v for k, v in llm_d.items() if k != "custom_terms"},
             custom_terms=llm_d.get("custom_terms", {}),
         ),
+        daemon=DaemonConfig(**daemon_d),
         output=OutputConfig(**output_d),
     )
 

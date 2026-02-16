@@ -10,12 +10,13 @@ dependencies = [
     "click>=8.0",
     "litellm>=1.0",
     "openai>=1.0",
+    "httpx[socks]>=0.24",
 ]
 
 [project.optional-dependencies]
 whisper = ["faster-whisper>=1.0"]
-sensevoice = ["funasr>=1.0"]
-all = ["faster-whisper>=1.0", "funasr>=1.0"]
+sensevoice = ["funasr>=1.0", "torch>=2.1", "torchaudio>=2.1"]
+all = ["faster-whisper>=1.0", "funasr>=1.0", "torch>=2.1", "torchaudio>=2.1"]
 dev = ["pytest>=8.0"]
 
 [project.scripts]
@@ -27,6 +28,27 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/voxy"]
+
+[tool.uv]
+# funasr 未约束依赖下界，uv 会选到不兼容 Python 3.12 的旧版
+constraint-dependencies = [
+    "librosa>=0.10",
+    "umap-learn>=0.5",
+    "pynndescent>=0.6",
+    "numba>=0.60",
+    "llvmlite>=0.43",
+    "scipy>=1.12",
+    "scikit-learn>=1.4",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu121" }]
+torchaudio = [{ index = "pytorch-cu121" }]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

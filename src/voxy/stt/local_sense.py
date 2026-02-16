@@ -1,5 +1,6 @@
 """本地 SenseVoice STT 后端 (funasr)"""
 
+import gc
 import re
 
 import numpy as np
@@ -90,3 +91,14 @@ class SenseVoiceSTT(STTEngine):
         text = result[0].get("text", "")
         text = rich_transcription_postprocess(text)
         return text
+
+    def unload(self) -> None:
+        if self._model is not None:
+            del self._model
+            self._model = None
+            gc.collect()
+            try:
+                import torch
+                torch.cuda.empty_cache()
+            except Exception:
+                pass

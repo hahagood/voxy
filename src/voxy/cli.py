@@ -1,6 +1,7 @@
 """CLI 入口 - click 命令行界面"""
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,6 +34,23 @@ def _append_history(raw: str, polished: str) -> None:
         )
     except Exception as e:
         click.echo(f"保存历史记录失败: {e}", err=True)
+
+
+def _transcribe(audio_data, config):
+    """转写音频：优先 daemon，不可用则回退直接模式。"""
+    if config.daemon.enabled:
+        try:
+            from voxy.daemon_client import transcribe_via_daemon
+
+            text = transcribe_via_daemon(audio_data, sample_rate=config.audio.sample_rate)
+            return text
+        except Exception:
+            click.echo("  守护进程不可用，使用直接模式...", err=True)
+
+    from voxy.stt import create_stt
+
+    engine = create_stt(config.stt)
+    return engine.transcribe(audio_data, sample_rate=config.audio.sample_rate)
 
 
 @click.group()
@@ -71,13 +89,10 @@ def record(ctx, raw: bool, output: str | None):
         click.echo("未录到音频。", err=True)
         sys.exit(1)
 
-    # 2. 语音识别
-    from voxy.stt import create_stt
-
+    # 2. 语音识别 (daemon 优先，回退直接模式)
     click.echo("  转写中...", err=True)
     try:
-        engine = create_stt(config.stt)
-        text = engine.transcribe(audio_data, sample_rate=config.audio.sample_rate)
+        text = _transcribe(audio_data, config)
     except Exception as e:
         click.echo(f"转写失败: {e}", err=True)
         sys.exit(1)
@@ -117,6 +132,79 @@ def devices():
     from voxy.audio import list_devices
 
     click.echo(list_devices())
+
+
+# ── daemon 命令组 ──────────────────────────────────────────
+
+
+@main.group()
+def daemon():
+    """守护进程管理 (模型常驻内存加速转写)"""
+
+
+@daemon.command("start")
+@click.option("--foreground", "-f", is_flag=True, help="前台运行 (适合 systemd)")
+@click.pass_context
+def daemon_start(ctx, foreground: bool):
+    """启动 STT 守护进程"""
+    config = ctx.obj["config"]
+
+    if not foreground:
+        # 后台启动：fork 子进程
+        pid = os.fork()
+        if pid > 0:
+            # 父进程
+            click.echo(f"守护进程已启动 (PID: {pid})")
+            return
+        # 子进程：脱离终端
+        os.setsid()
+        # 重定向 stdin/stdout/stderr
+        devnull = os.open(os.devnull, os.O_RDWR)
+        os.dup2(devnull, 0)
+        log_dir = Path.home() / ".local" / "share" / "voxy"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_fd = os.open(str(log_dir / "daemon.log"), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+        os.dup2(log_fd, 1)
+        os.dup2(log_fd, 2)
+        os.close(devnull)
+        os.close(log_fd)
+
+    from voxy.daemon import DaemonServer
+
+    server = DaemonServer(config)
+    server.run()
+
+
+@daemon.command("stop")
+def daemon_stop():
+    """停止 STT 守护进程"""
+    from voxy.daemon_client import daemon_shutdown
+
+    if daemon_shutdown():
+        click.echo("守护进程已停止")
+    else:
+        click.echo("守护进程未运行或无法连接", err=True)
+        sys.exit(1)
+
+
+@daemon.command("status")
+def daemon_status_cmd():
+    """查看守护进程状态"""
+    from voxy.daemon_client import daemon_status
+
+    status = daemon_status()
+    if status is None:
+        click.echo("守护进程未运行")
+        sys.exit(1)
+
+    click.echo("守护进程运行中")
+    click.echo(f"  STT 后端: {status.get('backend', '?')}")
+    loaded = status.get("model_loaded", False)
+    click.echo(f"  模型状态: {'已加载' if loaded else '未加载 (空闲已卸载)'}")
+    click.echo(f"  空闲时间: {status.get('idle_seconds', 0):.0f} 秒")
+
+
+# ── config 命令 ────────────────────────────────────────────
 
 
 @main.command("config")
@@ -161,6 +249,12 @@ def show_config(ctx):
     click.echo(f"  provider = {config.llm.provider}")
     click.echo(f"  api_base = {config.llm.api_base}")
     click.echo(f"  api_key = {'***' if config.llm.api_key else '(未设置)'}")
+    if config.llm.proxy:
+        click.echo(f"  proxy = {config.llm.proxy}")
+    click.echo()
+    click.echo(f"[daemon]")
+    click.echo(f"  enabled = {config.daemon.enabled}")
+    click.echo(f"  idle_timeout = {config.daemon.idle_timeout}")
     click.echo()
     click.echo(f"[output]")
     click.echo(f"  mode = {config.output.mode}")

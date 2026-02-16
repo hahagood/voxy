@@ -1,5 +1,6 @@
 """本地 faster-whisper STT 后端"""
 
+import gc
 import sys
 
 import numpy as np
@@ -46,3 +47,14 @@ class WhisperSTT(STTEngine):
 
         text = "".join(seg.text for seg in segments).strip()
         return text
+
+    def unload(self) -> None:
+        if self._model is not None:
+            del self._model
+            self._model = None
+            gc.collect()
+            try:
+                import torch
+                torch.cuda.empty_cache()
+            except Exception:
+                pass

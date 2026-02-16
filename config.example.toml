@@ -27,10 +27,15 @@ enabled = false                       # 是否启用 AI 文本润色
 provider = "ollama/qwen2.5:3b-instruct"  # litellm 模型标识 (3b 平衡速度与效果)
 api_base = "http://localhost:11434"   # API 地址 (Ollama 默认)
 # api_key = ""                        # 云端 API 需要设置密钥
+# proxy = "socks5://host:port"        # 代理地址 (支持 SOCKS5/HTTP)
 
 [llm.custom_terms]       # 自定义纠正词典：ASR 误识别 → 正确写法
 # "IMAX" = "Emacs"       # 示例：SenseVoice 常把 Emacs 识别为 IMAX
 # "派森" = "Python"
+
+[daemon]
+enabled = true           # record 命令是否优先尝试 daemon 转写
+idle_timeout = 10        # 空闲 N 分钟后卸载模型释放显存
 
 [output]
 mode = "clipboard"   # 输出方式: clipboard / stdout / type
