@@ -108,7 +108,12 @@ def record(ctx, raw: bool, output: str | None):
         from voxy.processor import process_text
 
         raw_text = text
-        click.echo("  AI 润色中...", err=True)
+        use_long = (config.llm.long_provider
+                    and len(text) > config.llm.long_threshold)
+        if use_long:
+            click.echo(f"  AI 润色中 (长文本 → {config.llm.long_provider})...", err=True)
+        else:
+            click.echo("  AI 润色中...", err=True)
         try:
             text = process_text(text, config.llm)
         except Exception as e:

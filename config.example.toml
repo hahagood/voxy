@@ -24,10 +24,15 @@ model = "whisper-1"                      # 模型名称
 
 [llm]
 enabled = false                       # 是否启用 AI 文本润色
-provider = "ollama/qwen2.5:3b-instruct"  # litellm 模型标识 (3b 平衡速度与效果)
+provider = "ollama/qwen2.5:1.5b-instruct"  # 短文本用本地小模型 (快)
 api_base = "http://localhost:11434"   # API 地址 (Ollama 默认)
 # api_key = ""                        # 云端 API 需要设置密钥
 # proxy = "socks5://host:port"        # 代理地址 (支持 SOCKS5/HTTP)
+# long_provider = "gemini/gemini-2.5-flash"  # 长文本用云端大模型 (质量好)
+# long_api_base = ""                  # 大模型 API 地址 (留空用默认)
+# long_api_key = ""                   # 大模型 API 密钥
+# long_proxy = "socks5://host:port"   # 大模型代理
+long_threshold = 200                  # 超过 N 字切换到大模型
 
 [llm.custom_terms]       # 自定义纠正词典：ASR 误识别 → 正确写法
 # "IMAX" = "Emacs"       # 示例：SenseVoice 常把 Emacs 识别为 IMAX

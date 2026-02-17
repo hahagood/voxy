@@ -39,6 +39,11 @@ DEFAULTS: dict[str, Any] = {
         "api_base": "http://localhost:11434",
         "api_key": "",
         "proxy": "",
+        "long_provider": "",
+        "long_api_base": "",
+        "long_api_key": "",
+        "long_proxy": "",
+        "long_threshold": 200,
         "custom_terms": {},
     },
     "daemon": {
@@ -106,6 +111,11 @@ class LLMConfig:
     api_base: str = "http://localhost:11434"
     api_key: str = ""
     proxy: str = ""
+    long_provider: str = ""
+    long_api_base: str = ""
+    long_api_key: str = ""
+    long_proxy: str = ""
+    long_threshold: int = 200
     custom_terms: dict[str, str] = field(default_factory=dict)
 
 
