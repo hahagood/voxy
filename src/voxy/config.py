@@ -46,6 +46,10 @@ DEFAULTS: dict[str, Any] = {
         "long_threshold": 200,
         "custom_terms": {},
     },
+    "commands": {
+        "fuzzy_threshold": 0.0,
+        "map": {},
+    },
     "daemon": {
         "enabled": True,
         "idle_timeout": 10,
@@ -120,6 +124,12 @@ class LLMConfig:
 
 
 @dataclass
+class CommandsConfig:
+    fuzzy_threshold: float = 0.0
+    map: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class DaemonConfig:
     enabled: bool = True
     idle_timeout: int = 10
@@ -135,6 +145,7 @@ class Config:
     audio: AudioConfig = field(default_factory=AudioConfig)
     stt: STTConfig = field(default_factory=STTConfig)
     llm: LLMConfig = field(default_factory=LLMConfig)
+    commands: CommandsConfig = field(default_factory=CommandsConfig)
     daemon: DaemonConfig = field(default_factory=DaemonConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
 
@@ -144,6 +155,7 @@ def _build_config(data: dict) -> Config:
     audio_d = data.get("audio", {})
     stt_d = data.get("stt", {})
     llm_d = data.get("llm", {})
+    commands_d = data.get("commands", {})
     daemon_d = data.get("daemon", {})
     output_d = data.get("output", {})
 
@@ -159,6 +171,10 @@ def _build_config(data: dict) -> Config:
         llm=LLMConfig(
             **{k: v for k, v in llm_d.items() if k != "custom_terms"},
             custom_terms=llm_d.get("custom_terms", {}),
+        ),
+        commands=CommandsConfig(
+            fuzzy_threshold=commands_d.get("fuzzy_threshold", 0.0),
+            map=commands_d.get("map", {}),
         ),
         daemon=DaemonConfig(**daemon_d),
         output=OutputConfig(**output_d),

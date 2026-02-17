@@ -38,6 +38,26 @@ long_threshold = 200                  # 超过 N 字切换到大模型
 # "IMAX" = "Emacs"       # 示例：SenseVoice 常把 Emacs 识别为 IMAX
 # "派森" = "Python"
 
+[commands]
+fuzzy_threshold = 0.0    # 模糊匹配阈值 (0-1)，0 表示仅精确匹配，推荐 0.8
+
+[commands.map]           # 语音命令映射：触发词 = 动作
+# 动作类型：keys:<组合键> | shell:<命令> | text:<文本>
+# 组合动作用 | 分隔，如 "keys:ctrl+a|keys:BackSpace"
+# "发送" = "keys:Return"
+# "换行" = "keys:shift+Return"
+# "撤销" = "keys:ctrl+z"
+# "重做" = "keys:ctrl+shift+z"
+# "保存" = "keys:ctrl+s"
+# "复制" = "keys:ctrl+c"
+# "粘贴" = "keys:ctrl+v"
+# "全选" = "keys:ctrl+a"
+# "删除" = "keys:ctrl+a|keys:BackSpace"
+# "关闭标签" = "keys:ctrl+w"
+# "新建标签" = "keys:ctrl+t"
+# "提交代码" = "shell:git add -A && git commit"
+# "我的邮箱" = "text:user@example.com"
+
 [daemon]
 enabled = true           # record 命令是否优先尝试 daemon 转写
 idle_timeout = 10        # 空闲 N 分钟后卸载模型释放显存

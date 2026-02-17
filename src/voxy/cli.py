@@ -103,7 +103,18 @@ def record(ctx, raw: bool, output: str | None):
 
     click.echo(f"  原始转写: {text}", err=True)
 
-    # 3. AI 润色 (可选)
+    # 3. 命令匹配
+    if config.commands.map:
+        from voxy.commands import match_command
+
+        result = match_command(text, config.commands.map, config.commands.fuzzy_threshold)
+        if result:
+            trigger, action = result
+            click.echo(f"  命令匹配: {trigger} → {action}", err=True)
+            click.echo(f"CMD:{action}")
+            return
+
+    # 4. AI 润色 (可选)
     if not raw and config.llm.enabled:
         from voxy.processor import process_text
 
@@ -121,7 +132,7 @@ def record(ctx, raw: bool, output: str | None):
         else:
             _append_history(raw_text, text)
 
-    # 4. 输出
+    # 5. 输出
     from voxy.output import output_text
 
     try:
