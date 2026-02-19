@@ -6,26 +6,46 @@ from voxy.config import LLMConfig
 from voxy.prompts import format_prompt
 
 
-def _process_ollama(system_prompt: str, user_prompt: str, provider: str, api_base: str) -> str:
-    """直接调用 Ollama API，跳过 litellm 中间层。"""
+def _process_ollama(system_prompt: str, user_prompt: str, provider: str,
+                    api_base: str, api_key: str = "", proxy: str = "") -> str:
+    """直接调用 Ollama API，跳过 litellm 中间层。支持本地和云端。"""
     import httpx
+    from urllib.parse import urlparse
 
     # provider 格式: "ollama/model_name"
     model = provider.split("/", 1)[1]
 
-    resp = httpx.post(
-        f"{api_base}/api/chat",
-        json={
-            "model": model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            "stream": False,
-            "options": {"temperature": 0.3},
-        },
-        timeout=60.0,
-    )
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    # 本地地址不走代理；云端地址使用配置的代理或环境变量
+    host = urlparse(api_base).hostname or ""
+    is_local = host in ("localhost", "127.0.0.1", "::1")
+
+    # 云端模型 (如 :cloud) 响应较慢，需要更长超时
+    timeout = 180.0 if ":cloud" in model else 60.0
+    client_kwargs: dict = {"timeout": timeout}
+    if is_local:
+        client_kwargs["trust_env"] = False
+    elif proxy:
+        client_kwargs["proxy"] = proxy
+
+    with httpx.Client(**client_kwargs) as client:
+        resp = client.post(
+            f"{api_base}/api/chat",
+            headers=headers,
+            json={
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "stream": False,
+                "think": False,
+                "options": {"temperature": 0.3},
+            },
+        )
     resp.raise_for_status()
     return resp.json()["message"]["content"]
 
@@ -86,7 +106,7 @@ def _call_llm(system_prompt: str, user_prompt: str, provider: str,
               api_base: str, api_key: str, proxy: str) -> str:
     """根据 provider 类型选择调用方式。"""
     if provider.startswith("ollama/"):
-        return _process_ollama(system_prompt, user_prompt, provider, api_base)
+        return _process_ollama(system_prompt, user_prompt, provider, api_base, api_key, proxy)
     else:
         return _process_litellm(system_prompt, user_prompt, provider, api_base, api_key, proxy)
 

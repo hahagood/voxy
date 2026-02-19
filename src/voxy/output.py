@@ -49,10 +49,10 @@ def output_text(text: str, mode: str) -> None:
     if mode == "stdout":
         print(text)
     elif mode == "clipboard":
-        _copy_to_clipboard(text)
+        _copy_to_clipboard(text + "\n")
         print("  已复制到剪贴板。", file=sys.stderr)
     elif mode == "type":
-        _type_text(text)
+        _type_text(text + "\n")
         print("  已输入到焦点窗口。", file=sys.stderr)
     else:
         raise ValueError(f"未知的输出模式: {mode}，支持: clipboard / stdout / type")
