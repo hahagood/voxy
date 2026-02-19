@@ -65,7 +65,7 @@ def _process_litellm(system_prompt: str, user_prompt: str, provider: str,
     logging.getLogger("litellm").setLevel(logging.CRITICAL)
 
     kwargs = {}
-    if api_base:
+    if api_base and "localhost" not in api_base and "127.0.0.1" not in api_base:
         kwargs["api_base"] = api_base
     if api_key:
         kwargs["api_key"] = api_key
