@@ -77,3 +77,75 @@ class TestComboActions:
         cmd_map = {"我的邮箱": "text:user@example.com"}
         result = match_command("我的邮箱", cmd_map)
         assert result == ("我的邮箱", "text:user@example.com")
+
+
+class TestContextOverride:
+    """窗口上下文覆盖测试"""
+
+    def setup_method(self):
+        self.cmd_map = {"发送": "keys:Return", "换行": "keys:Return"}
+        self.context = {
+            "foot": {"发送": "keys:Return", "换行": "text:\\|keys:Return"},
+            "firefox": {"发送": "keys:ctrl+Return"},
+            "vivaldi": {"发送": "keys:ctrl+Return"},
+        }
+
+    def test_context_overrides_default(self):
+        result = match_command(
+            "发送", self.cmd_map,
+            window_class="firefox", context=self.context,
+        )
+        assert result == ("发送", "keys:ctrl+Return")
+
+    def test_context_preserves_unoverridden(self):
+        # firefox context 只覆盖"发送"，"换行"应保持默认
+        result = match_command(
+            "换行", self.cmd_map,
+            window_class="firefox", context=self.context,
+        )
+        assert result == ("换行", "keys:Return")
+
+    def test_case_insensitive_contains_match(self):
+        # "vivaldi" 应匹配 "vivaldi-stable"
+        result = match_command(
+            "发送", self.cmd_map,
+            window_class="vivaldi-stable", context=self.context,
+        )
+        assert result == ("发送", "keys:ctrl+Return")
+
+    def test_case_insensitive_pattern(self):
+        # context key "Firefox" (大写) 也应匹配 window_class "firefox"
+        context = {"Firefox": {"发送": "keys:ctrl+Return"}}
+        result = match_command(
+            "发送", self.cmd_map,
+            window_class="firefox", context=context,
+        )
+        assert result == ("发送", "keys:ctrl+Return")
+
+    def test_no_matching_context_uses_default(self):
+        result = match_command(
+            "发送", self.cmd_map,
+            window_class="kitty", context=self.context,
+        )
+        assert result == ("发送", "keys:Return")
+
+    def test_no_window_class_uses_default(self):
+        result = match_command(
+            "发送", self.cmd_map,
+            window_class=None, context=self.context,
+        )
+        assert result == ("发送", "keys:Return")
+
+    def test_empty_context_uses_default(self):
+        result = match_command(
+            "发送", self.cmd_map,
+            window_class="firefox", context={},
+        )
+        assert result == ("发送", "keys:Return")
+
+    def test_foot_context_override(self):
+        result = match_command(
+            "换行", self.cmd_map,
+            window_class="foot", context=self.context,
+        )
+        assert result == ("换行", "text:\\|keys:Return")

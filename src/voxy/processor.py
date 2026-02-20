@@ -85,7 +85,7 @@ def _process_litellm(system_prompt: str, user_prompt: str, provider: str,
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.3,
-            max_tokens=2048,
+            max_tokens=4096,
             **kwargs,
         )
     finally:
@@ -116,11 +116,13 @@ def process_text(raw_text: str, config: LLMConfig) -> str:
     if not raw_text.strip():
         return raw_text
 
-    system_prompt, user_prompt = format_prompt(raw_text, config.custom_terms)
-
     # 长文本且配置了大模型 → 切换到大模型
     use_long = (config.long_provider
                 and len(raw_text) > config.long_threshold)
+
+    system_prompt, user_prompt = format_prompt(
+        raw_text, config.custom_terms, segment=use_long,
+    )
 
     if use_long:
         provider = config.long_provider

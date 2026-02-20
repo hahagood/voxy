@@ -27,6 +27,15 @@ SYSTEM_PROMPT = """\
 只输出编辑后的文本，不要解释。/no_think\
 """
 
+SEGMENT_INSTRUCTION = """\
+
+对于较长的文本，按意群自然分段：
+- 每段聚焦一个主题或观点，段间用空行分隔
+- 列举项（第一/第二/首先/其次/另外 等）每项独占一段
+- 不要添加标题、序号或列表符号，只分段
+- 必须处理完整个输入，不得截断
+"""
+
 USER_PROMPT_TEMPLATE = "输入：{text}\n输出："
 
 
@@ -39,7 +48,8 @@ def _build_terms_section(custom_terms: dict[str, str]) -> str:
 
 
 def format_prompt(
-    raw_text: str, custom_terms: dict[str, str] | None = None
+    raw_text: str, custom_terms: dict[str, str] | None = None,
+    segment: bool = False,
 ) -> tuple[str, str]:
     """返回 (system_prompt, user_prompt) 元组。"""
     system = SYSTEM_PROMPT
@@ -47,5 +57,10 @@ def format_prompt(
         system = system.replace(
             "只输出编辑后的文本",
             _build_terms_section(custom_terms) + "只输出编辑后的文本",
+        )
+    if segment:
+        system = system.replace(
+            "只输出编辑后的文本",
+            SEGMENT_INSTRUCTION + "只输出编辑后的文本",
         )
     return system, USER_PROMPT_TEMPLATE.format(text=raw_text)

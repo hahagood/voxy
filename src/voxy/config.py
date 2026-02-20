@@ -49,6 +49,7 @@ DEFAULTS: dict[str, Any] = {
     "commands": {
         "fuzzy_threshold": 0.0,
         "map": {},
+        "context": {},
     },
     "daemon": {
         "enabled": True,
@@ -127,6 +128,7 @@ class LLMConfig:
 class CommandsConfig:
     fuzzy_threshold: float = 0.0
     map: dict[str, str] = field(default_factory=dict)
+    context: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 @dataclass
@@ -175,6 +177,7 @@ def _build_config(data: dict) -> Config:
         commands=CommandsConfig(
             fuzzy_threshold=commands_d.get("fuzzy_threshold", 0.0),
             map=commands_d.get("map", {}),
+            context=commands_d.get("context", {}),
         ),
         daemon=DaemonConfig(**daemon_d),
         output=OutputConfig(**output_d),

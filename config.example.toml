@@ -58,6 +58,16 @@ fuzzy_threshold = 0.0    # 模糊匹配阈值 (0-1)，0 表示仅精确匹配，
 # "提交代码" = "shell:git add -A && git commit"
 # "我的邮箱" = "text:user@example.com"
 
+# [commands.context."foot"]        # 按窗口 class 覆盖命令 (大小写不敏感包含匹配)
+# "发送" = "keys:Return"
+# "换行" = "text:\\|keys:Return"
+
+# [commands.context."firefox"]
+# "发送" = "keys:ctrl+Return"
+
+# [commands.context."vivaldi"]     # 匹配 "vivaldi-stable" 等
+# "发送" = "keys:ctrl+Return"
+
 [daemon]
 enabled = true           # record 命令是否优先尝试 daemon 转写
 idle_timeout = 10        # 空闲 N 分钟后卸载模型释放显存

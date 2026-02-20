@@ -105,9 +105,16 @@ def record(ctx, raw: bool, output: str | None):
 
     # 3. 命令匹配
     if config.commands.map:
-        from voxy.commands import match_command
+        from voxy.commands import get_active_window_class, match_command
 
-        result = match_command(text, config.commands.map, config.commands.fuzzy_threshold)
+        window_class = None
+        if config.commands.context:
+            window_class = get_active_window_class()
+
+        result = match_command(
+            text, config.commands.map, config.commands.fuzzy_threshold,
+            window_class=window_class, context=config.commands.context,
+        )
         if result:
             trigger, action = result
             click.echo(f"  命令匹配: {trigger} → {action}", err=True)

@@ -15,7 +15,9 @@ Linux 语音听写工具 — Typeless 开源平替。
 - **润色历史记录** — 自动保存原始转写与润色结果的对照记录，便于积累数据优化提示词
 - **自动静音检测** — 录音前自动测量环境噪音，动态设定阈值，说完自动停止
 - **智能输入** — 自动识别窗口类型，选择最佳输入方式（粘贴 / 直接输入）
-- **语音命令（计划中）** — 超越纯听写：说出预定义短语即可执行快捷键、Shell 脚本等操作
+- **语音命令** — 超越纯听写：说出预定义短语即可执行快捷键、Shell 脚本等操作，支持精确/模糊匹配
+- **Power Mode** — 按窗口上下文切换命令映射：同一语音命令在不同应用中执行不同操作（如"发送"在浏览器中为 `Ctrl+Return`，在终端中为 `Return`）
+- **长文本自动分段** — 长文本走云端大模型时，自动按意群分段，列举项各自成段
 - **Hyprland 集成** — 全局快捷键 `Super+R` 弹出浮动小窗录音
 
 ## 系统要求
@@ -138,6 +140,9 @@ cp config.example.toml ~/.config/voxy/config.toml
 | `llm.provider` | `ollama/qwen2.5:1.5b-instruct` | 短文本润色模型 |
 | `llm.long_provider` | (空) | 长文本润色模型（如 `gemini/gemini-2.5-flash`） |
 | `llm.long_threshold` | `200` | 超过 N 字切换到长文本模型 |
+| `commands.fuzzy_threshold` | `0.0` | 命令模糊匹配阈值（0=精确匹配，推荐 0.8） |
+| `commands.map` | `{}` | 语音命令映射（触发词 → 动作） |
+| `commands.context.<class>` | `{}` | 按窗口 class 覆盖命令映射 |
 | `daemon.enabled` | `true` | 优先使用 daemon 转写 |
 | `daemon.idle_timeout` | `10` | 空闲 N 分钟后自动卸载模型 |
 | `output.mode` | `clipboard` | 输出方式：clipboard / stdout / type |
@@ -180,6 +185,7 @@ src/voxy/
 │   └── cloud.py         # OpenAI Whisper API
 ├── daemon.py        # STT 守护进程 (Unix socket server)
 ├── daemon_client.py # 守护进程客户端
+├── commands.py      # 语音命令匹配 + 窗口上下文检测
 ├── processor.py     # AI 文本润色 (Ollama / litellm)
 ├── prompts.py       # LLM 提示词模板
 └── output.py        # 文本输出 (wtype/剪贴板/stdout)
@@ -191,13 +197,13 @@ src/voxy/
 
 - [x] **Daemon 模式** — 后台常驻，模型预加载，避免每次冷启动延迟
 - [x] **自定义词汇表** — 配置常用术语和替换规则，提升中文专有名词识别准确率
-- [ ] **语音命令** — 不只是听写，还能用语音执行操作。转写后自动匹配预定义命令，触发快捷键、Shell 脚本等动作。这是对 Typeless 等纯转写工具的根本性超越
-- [ ] **多 Prompt Mode** — 支持 casual / formal / code 等多种润色风格，`--mode` 切换
-- [ ] **Power Mode** — 根据当前焦点窗口 class 自动匹配润色规则，同一语音命令在不同应用中执行不同操作（如"发送"在 X 中为 `Ctrl+Return`，在微信中为 `Return`）
+- [x] **语音命令** — 不只是听写，还能用语音执行操作。转写后自动匹配预定义命令，触发快捷键、Shell 脚本等动作。这是对 Typeless 等纯转写工具的根本性超越
+- [x] **Power Mode** — 根据当前焦点窗口 class 自动匹配润色规则，同一语音命令在不同应用中执行不同操作（如"发送"在浏览器中为 `Ctrl+Return`，在终端中为 `Return`）
+- [x] **长文本自动分段** — 长文本走大模型时按意群分段，列举项独占一段
 - [ ] **上下文感知** — 将剪贴板/选中文本作为上下文传给 LLM，提升润色质量
 - [ ] **媒体播放控制** — 录音时自动暂停音乐（playerctl）
 
-### 语音命令设计草案
+### 语音命令
 
 Typeless、VoiceInk 等工具的本质是**语音→文字**的单向管道。语音命令将 Voxy 从「听写工具」升级为「语音操作系统接口」——说一句话就能触发任意操作。
 
@@ -210,13 +216,26 @@ Typeless、VoiceInk 等工具的本质是**语音→文字**的单向管道。�
 
 ```toml
 [commands]
-"新建会话" = "keys:ctrl+l"                 # 发送快捷键
-"提交代码" = "shell:git add -A && git commit"  # 执行 Shell 命令
+fuzzy_threshold = 0.0    # 模糊匹配阈值 (0=精确匹配，推荐 0.8)
+
+[commands.map]
+"发送" = "keys:Return"
+"换行" = "keys:shift+Return"
 "撤销" = "keys:ctrl+z"
 "保存" = "keys:ctrl+s"
-"复制" = "keys:ctrl+c"
-"全选" = "keys:ctrl+a"
-"关闭标签" = "keys:ctrl+w"
+"删除" = "keys:ctrl+a|keys:BackSpace"  # 组合动作用 | 分隔
+"提交代码" = "shell:git add -A && git commit"
+
+# 按窗口 class 覆盖默认命令（大小写不敏感包含匹配）
+[commands.context."foot"]         # 匹配 foot 终端
+"发送" = "keys:Return"
+"换行" = "text:\\|keys:Return"    # 终端续行
+
+[commands.context."firefox"]      # 匹配 Firefox
+"发送" = "keys:ctrl+Return"
+
+[commands.context."vivaldi"]      # 匹配 vivaldi-stable
+"发送" = "keys:ctrl+Return"
 ```
 
 ## License
