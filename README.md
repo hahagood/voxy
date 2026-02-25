@@ -18,6 +18,7 @@ Linux 语音听写工具 — Typeless 开源平替。
 - **语音命令** — 超越纯听写：说出预定义短语即可执行快捷键、Shell 脚本等操作，支持精确/模糊匹配
 - **Power Mode** — 按窗口上下文切换命令映射：同一语音命令在不同应用中执行不同操作（如"发送"在浏览器中为 `Ctrl+Return`，在终端中为 `Return`）
 - **长文本自动分段** — 长文本走云端大模型时，自动按意群分段，列举项各自成段
+- **音频文件转写** — 直接转写录音文件（m4a/aac/mp3/wav 等），支持长音频自动分段，避免显存溢出
 - **Hyprland 集成** — 全局快捷键 `Super+R` 弹出浮动小窗录音
 
 ## 系统要求
@@ -74,6 +75,16 @@ uv run voxy daemon stop               # 停止守护进程
 uv run voxy devices                   # 列出音频设备
 uv run voxy config                    # 显示当前配置
 ```
+
+### 音频文件转写
+
+```bash
+voxy transcribe recording.aac              # 转写 + 润色 → recording.txt
+voxy transcribe recording.m4a output.txt   # 指定输出文件
+voxy transcribe recording.wav --raw        # 跳过润色，原始转写
+```
+
+支持所有常见音频格式（wav/flac/ogg 由 soundfile 直接加载，m4a/aac/mp3 等通过 ffmpeg 转换）。长音频自动按 30 秒分段转写，避免 GPU 显存不足。
 
 ### Daemon 模式（推荐）
 

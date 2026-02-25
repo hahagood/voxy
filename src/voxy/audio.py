@@ -1,12 +1,57 @@
 """麦克风录音模块 - sounddevice 流式采集 + 静音检测"""
 
+import subprocess
 import sys
+import tempfile
 import threading
+from pathlib import Path
 
 import numpy as np
 import sounddevice as sd
 
 from voxy.config import AudioConfig
+
+
+def load_audio(path: str, target_sr: int = 16000) -> np.ndarray:
+    """加载音频文件，返回 float32 mono numpy array（重采样到 target_sr）。
+
+    优先用 soundfile 加载（wav/flac/ogg），失败时回退 ffmpeg 转换（m4a/mp3 等）。
+    """
+    import soundfile as sf
+
+    audio_path = Path(path)
+
+    # 尝试 soundfile 直接加载
+    try:
+        data, sr = sf.read(str(audio_path), dtype="float32")
+    except Exception:
+        # 回退 ffmpeg：转为 wav 临时文件再加载
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as tmp:
+            tmp_path = tmp.name
+        try:
+            subprocess.run(
+                [
+                    "ffmpeg", "-y", "-i", str(audio_path),
+                    "-ac", "1", "-ar", str(target_sr),
+                    "-f", "wav", tmp_path,
+                ],
+                capture_output=True, check=True,
+            )
+            data, sr = sf.read(tmp_path, dtype="float32")
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
+
+    # 多声道 → mono
+    if data.ndim > 1:
+        data = data.mean(axis=1)
+
+    # 重采样
+    if sr != target_sr:
+        num_samples = int(len(data) * target_sr / sr)
+        indices = np.linspace(0, len(data) - 1, num_samples)
+        data = np.interp(indices, np.arange(len(data)), data).astype(np.float32)
+
+    return data
 
 
 def list_devices() -> str:

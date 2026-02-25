@@ -150,6 +150,93 @@ def record(ctx, raw: bool, output: str | None):
 
 
 @main.command()
+@click.argument("input_file", type=click.Path(exists=True))
+@click.argument("output_file", type=click.Path(), default=None, required=False)
+@click.option("--raw", is_flag=True, help="跳过 AI 润色，直接输出原始转写")
+@click.pass_context
+def transcribe(ctx, input_file, output_file, raw):
+    """音频文件 → 文字稿"""
+    config = ctx.obj["config"]
+
+    if output_file is None:
+        output_file = str(Path(input_file).with_suffix(".txt"))
+
+    # 1. 加载音频
+    from voxy.audio import load_audio
+
+    click.echo("  加载音频...", err=True)
+    try:
+        audio_data = load_audio(input_file, target_sr=config.audio.sample_rate)
+    except Exception as e:
+        click.echo(f"加载音频失败: {e}", err=True)
+        sys.exit(1)
+
+    if audio_data.size == 0:
+        click.echo("音频为空。", err=True)
+        sys.exit(1)
+
+    duration = len(audio_data) / config.audio.sample_rate
+    click.echo(f"  音频时长: {duration:.1f}s", err=True)
+
+    # 2. 分段转写（每段 30 秒，避免显存不足）
+    import numpy as np
+
+    chunk_seconds = 30
+    chunk_size = chunk_seconds * config.audio.sample_rate
+    total = len(audio_data)
+    parts = []
+
+    if total <= chunk_size:
+        click.echo("  转写中...", err=True)
+        try:
+            text = _transcribe(audio_data, config)
+        except Exception as e:
+            click.echo(f"转写失败: {e}", err=True)
+            sys.exit(1)
+        parts.append(text)
+    else:
+        n_chunks = int(np.ceil(total / chunk_size))
+        for i in range(n_chunks):
+            start = i * chunk_size
+            end = min(start + chunk_size, total)
+            chunk = audio_data[start:end]
+            click.echo(f"  转写中 [{i+1}/{n_chunks}]...", err=True)
+            try:
+                part = _transcribe(chunk, config)
+            except Exception as e:
+                click.echo(f"转写第 {i+1} 段失败: {e}", err=True)
+                sys.exit(1)
+            parts.append(part)
+
+    text = "".join(parts)
+
+    if not text.strip():
+        click.echo("未识别到文字。", err=True)
+        sys.exit(1)
+
+    click.echo(f"  原始转写: {text[:200]}{'...' if len(text) > 200 else ''}", err=True)
+
+    # 3. AI 润色 (可选)
+    if not raw and config.llm.enabled:
+        from voxy.processor import process_text
+
+        raw_text = text
+        click.echo("  AI 润色中...", err=True)
+        try:
+            text = process_text(text, config.llm)
+        except Exception as e:
+            click.echo(f"AI 润色失败 (使用原始文本): {e}", err=True)
+        else:
+            _append_history(raw_text, text)
+
+    # 4. 写入文件
+    from pathlib import Path
+
+    Path(output_file).write_text(text + "\n", encoding="utf-8")
+    click.echo(f"  已保存到 {output_file}", err=True)
+
+
+@main.command()
 def devices():
     """列出音频输入设备"""
     from voxy.audio import list_devices
