@@ -186,10 +186,21 @@ cp config.example.toml ~/.config/voxy/config.toml
 
 `history.json` 里的 `raw/polished` 对照可以用来持续补充 `llm.custom_terms`，把高频误识别逐步沉淀成词典。
 
-项目自带一个粗筛脚本：
+项目里现在有两条整理入口：
+
+- `contrib/extract_custom_terms.py`：通用粗筛脚本，只从历史里提候选
+- `.codex/skills/voxy-dictionary-maintainer/`：项目内 skill，面向后续持续维护
+
+快速粗筛：
 
 ```bash
 python contrib/extract_custom_terms.py --min-count 2
+```
+
+更适合日常维护的审查脚本：
+
+```bash
+python .codex/skills/voxy-dictionary-maintainer/scripts/review_terms.py --min-count 2
 ```
 
 默认读取：
@@ -209,11 +220,31 @@ python contrib/extract_custom_terms.py --min-count 2
 建议流程：
 
 - 先运行脚本做粗筛，找出可能的术语映射
+- 如果已经在用项目内 skill，优先运行 `review_terms.py`，它会结合当前 `config.toml` 一起审查
 - 再人工确认后，复制到 `~/.config/voxy/config.toml` 的 `[llm.custom_terms]`
 - 优先保留专有名词、产品名、项目名、英文技术术语
 - 不要直接批量导入所有候选项，避免把上下文相关改写误当作通用词典
 
 这一步尤其适合沉淀像 `GitHub`、`OpenRouter`、`Ollama`、`Anthropic`、`README.md` 这类经常被 ASR 误识别的词。
+
+### 项目内 Skill
+
+仓库内置了一个项目专用 skill：
+
+```bash
+.codex/skills/voxy-dictionary-maintainer/
+```
+
+这个 skill 适合以下场景：
+
+- 检查 `history.json` 里最近积累了哪些高频误识别
+- 对比当前 `~/.config/voxy/config.toml`，区分新增候选、已存在映射、冲突项
+- 维护 `llm.custom_terms`，而不是只做一次性的粗筛
+
+其中：
+
+- `contrib/extract_custom_terms.py` 只负责“从历史里提候选”
+- `.codex/skills/voxy-dictionary-maintainer/scripts/review_terms.py` 会进一步结合当前配置，把结果分成 `new_candidates`、`conflicts`、`existing_matches`
 
 ## 项目结构
 
@@ -237,6 +268,14 @@ src/voxy/
 contrib/
 ├── voxy-daemon.service      # systemd 用户服务
 └── extract_custom_terms.py  # 从 history.json 粗筛词典候选项
+
+.codex/
+└── skills/
+    └── voxy-dictionary-maintainer/
+        ├── SKILL.md
+        ├── agents/openai.yaml
+        ├── references/review-rules.md
+        └── scripts/review_terms.py
 ```
 
 ## Roadmap
