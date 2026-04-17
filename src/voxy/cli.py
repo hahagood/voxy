@@ -230,8 +230,6 @@ def transcribe(ctx, input_file, output_file, raw):
             _append_history(raw_text, text)
 
     # 4. 写入文件
-    from pathlib import Path
-
     Path(output_file).write_text(text + "\n", encoding="utf-8")
     click.echo(f"  已保存到 {output_file}", err=True)
 
