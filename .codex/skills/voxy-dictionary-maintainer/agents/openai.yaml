@@ -1,0 +1,4 @@
+interface:
+  display_name: "Voxy Dictionary"
+  short_description: "Maintain voxy custom terms"
+  default_prompt: "Use $voxy-dictionary-maintainer to review Voxy history and propose new custom_terms."
