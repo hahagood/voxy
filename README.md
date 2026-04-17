@@ -182,6 +182,39 @@ cp config.example.toml ~/.config/voxy/config.toml
 - 保存失败不影响主流程
 - 可用 `jq` 查看：`jq . ~/.local/share/voxy/history.json`
 
+## 从历史记录整理词典
+
+`history.json` 里的 `raw/polished` 对照可以用来持续补充 `llm.custom_terms`，把高频误识别逐步沉淀成词典。
+
+项目自带一个粗筛脚本：
+
+```bash
+python contrib/extract_custom_terms.py --min-count 2
+```
+
+默认读取：
+
+```bash
+~/.local/share/voxy/history.json
+```
+
+输出格式直接兼容 `config.toml` 里的 `[llm.custom_terms]` 片段，例如：
+
+```toml
+[llm.custom_terms]
+# count=2
+"按按" = "Anthropic"
+```
+
+建议流程：
+
+- 先运行脚本做粗筛，找出可能的术语映射
+- 再人工确认后，复制到 `~/.config/voxy/config.toml` 的 `[llm.custom_terms]`
+- 优先保留专有名词、产品名、项目名、英文技术术语
+- 不要直接批量导入所有候选项，避免把上下文相关改写误当作通用词典
+
+这一步尤其适合沉淀像 `GitHub`、`OpenRouter`、`Ollama`、`Anthropic`、`README.md` 这类经常被 ASR 误识别的词。
+
 ## 项目结构
 
 ```
@@ -200,6 +233,10 @@ src/voxy/
 ├── processor.py     # AI 文本润色 (Ollama / litellm)
 ├── prompts.py       # LLM 提示词模板
 └── output.py        # 文本输出 (wtype/剪贴板/stdout)
+
+contrib/
+├── voxy-daemon.service      # systemd 用户服务
+└── extract_custom_terms.py  # 从 history.json 粗筛词典候选项
 ```
 
 ## Roadmap
